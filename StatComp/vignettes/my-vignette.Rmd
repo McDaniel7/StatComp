@@ -1,0 +1,1689 @@
+---
+title: "StatComp18020"
+author: "18020"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{StatComp18020}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview 
+
+__StatComp18020__ is a simple R package including five functions from Course "Statistic Computing". All of them are easy to use. This package includes, namely, _rBC_ (help to generate data samples with distribution Beta(a, b) or Cauchy(l, s)), _MHT_ (generate metropolis-Hastings chains with student t distribution), _MHC_ (chains with Cauchy dsitribution), _CVM.test_ (help to test whether two samples have nearly the same distribution) and _GRm_ (help to monitor the convergence of a M-H chain by Gelman-Rubin method).
+
+In the below I will put all the .Rmd file I write in "Statistic Computing" course. They includes many statistical methods to deal with big data sample, such as Monte Carlo Integration, Bootstrap, Permutation, MCMC and so on, with some advanced version of algorithm.
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# A-18020-2018-09-14
+
+This is the first homework in the course, just write something simple.
+
+## Question1
+
+The multiplication of two matrixs and give colnames to the result.
+
+## Answer1
+
+```{r matrix}
+a = matrix(1:12, nrow = 6, byrow = T)
+b = rbind(c(1, 2, 3), c(4, 5, 6))
+(c = a %*% b)
+colnames(c) = c("col1", "col2", "col3")
+c
+```
+
+## Question2
+
+Make a plot in detail.
+
+## Answer2
+
+```{r plot}
+x = rnorm(10, sd = 0.7)
+y = rnorm(10, sd = 0.7)
+opar = par()
+par(bg="wheat", mar=c(3, 2, 2.5, 0.25))
+plot(x, y, type="n", xlab="", ylab="", xlim=c(-2, 2),
+     ylim=c(-2, 2), xaxt="n", yaxt="n")
+rect(-3, -3, 3 ,3, col = "snow")
+points(x, y, pch = 23, col = "black", bg = "red")
+axis(side=1, c(-2, 0, 2), labels=TRUE)
+axis(side=2, c(-2, 0, 2), labels=TRUE)
+title("How to customize a plot with R")
+mtext("Ten random values", side=1,line = 1, at=1.5, cex=0.9, font=3)
+mtext("Ten other values", line=0.5, at=-1.8, cex=0.9, font=3)
+```
+
+## Question3
+
+Data analysis
+
+## Answer3
+
+```{r analysis, eval= FALSE}
+data = InsectSprays
+aov.spray = aov(sqrt(count) ~ spray, data)
+str(aov.spray)
+layout(matrix(c(1, 2, 3, 4), 2, 2, byrow = TRUE))
+plot(aov.spray)
+```
+
+# A-18020-2018-09-21
+
+These three question are all about generate random data with discrete and continuous distribution.
+
+## Question 1
+
+A discrete random variable $\mathit{X}$ has probability mass function 
+
+|  x  | 0 | 1 | 2 | 3 | 4 |
+|-----|---|---|---|---|---|
+| p(x)|0.1|0.2|0.2|0.2|0.3|
+
+Use the inverse transform method to generate a random sample of size 1000 from the distribution of $\mathit{X}$. Construct a relative frequency table and compare the empirical with the theoretical probabilities. Repeat using the R $\mathcal{sample}$ function.
+
+## Answer 1
+
+（1）First I use the inverse transform method to generate the sample of size 1000.
+
+```{r inverse transform}
+x = 0:4
+p = c(0.1, 0.2, 0.2, 0.2, 0.3)
+cp = cumsum(p) # sum by interval
+m = 1000
+r = numeric(m)
+```
+
+Now I can generate the sample.
+
+```{r inverse transform2}
+(r = x[findInterval(runif(m), cp) + 1])
+hist(r, breaks = seq(-0.5, 4.5, 1))
+```
+
+- **Observing the histogram, I can find that the distribution of r is close to the probability distribution of $\mathit{X}$.**
+
+（2）Now I use the $\mathcal{sample}$ function to generate a random sample of size 1000.
+
+```{r sample function}
+r = sample(0:4, 1000, replace = T, prob = c(0.1, 0.2, 0.2, 0.2, 0.3))
+hist(r, breaks = seq(-0.5, 4.5, 1))
+```
+
+- **Comparing two histogram, both ways to generate the random variable are useful and practical in this question. When n is big enough, the distribution of r corresponds very well to the theoretical probabilities.**
+
+## Question 2
+
+Write a function to generate a random sample of size n from the Beta(a,b) distribution by the acceptance-rejection method. Generate a random sample of size 1000 from the Beta(3,2) distribution. Graph the histogram of the sample with the theoretical Beta(3,2) density superimposed.
+
+## Answer 2
+
+```{r A-R method}
+G <- function(n, a, b){
+  j = k = 0
+  y = numeric(n)
+  while(k < n){
+    u = runif(1)
+    j = j + 1 # record the total number of times to generate a sample of size n
+    x = runif(1)
+    if(x^(a - 1) * (1 - x)^(b - 1) > u) {
+      # accept x
+      k = k + 1
+      y[k] = x
+    }
+  }
+  list(j, y)
+}
+```
+
+Generate the sample of the distribution of Beta(3, 2).
+
+```{r A-R method 2}
+x = G(1000, 3, 2)
+t = x[[1]]
+(r = x[[2]])
+hist(r, freq = F, ylim = c(0, 2))
+curve(expr = 12 * x^2 *(1 - x), 0, 1, type = "l", add = TRUE) # add the curve of the probability density function.
+```
+
+The interval is 0.1 automatically. Under this length of interval, the result is already well. If the length of interval become smaller, the histogram may corresponds to the curve better. 
+
+See the result below, the length of interval I choose is 0.05.
+
+```{r A-R method 3}
+hist(r, freq = F, ylim = c(0, 2), breaks = seq(0, 1, 0.05))
+curve(expr = 12 * x^2 *(1 - x), 0, 1, type = "l", add = TRUE)
+```
+
+- **It is easy to see that when each interval is shorter, the variation trend of columns is more suitable to the theoretical density.**
+
+I can even give the total times needed in the process of generating and the probability for x to be accepted approximately.
+
+```{r A-R method 4}
+t
+1000/t
+```
+
+## Question 3
+
+Simulate a continuous Exponential-Gamma mixture. Suppose that the rate parameter $\bigwedge$ has Gamma( $\mathit{r}$ , $\beta$ ) distribution and $\mathit{Y}$ has Exp( $\bigwedge$ ) distribution. That is, ( $\mathit{Y}$|$\bigwedge$=$\lambda$ ) ~ $f_y$( $\mathit{y}$|$\lambda$ ) =$\lambda$$e^{-y}$ . Generate 1000 random observations from this mixture with $\mathit{r}$ = 4 and $\beta$ = 2.
+
+## Answer 3
+
+```{r mixture}
+n = 1000; r = 4; beta = 2
+lambda = rgamma(n, r, beta) # a sample of lambda
+(x = rexp(n, lambda))
+hist(x, freq = F, breaks = seq(0, max(max(x)+1, 20), 1)) # max(max()) not only ensures breaks can cover the range of the x but also makes the xlim of x and y similar.
+```
+
+It can be seen from 3.13 that the mixtrue has a Pareto distribution with cdf
+$\mathit{F}$$($$\mathit{y}$$)$ = 1 - $($ $\frac{\beta}{\beta + y}$ $)$ $^{r}$, and I use inverse method to generate the sample of Pareto distribution of size n. 
+
+```{r mixture 2}
+u = runif(n)
+z = (1 - u)^(1/r)
+y = beta / z - beta
+hist(y, freq = F, breaks = seq(0, max(max(y)+1, 20), 1))
+```
+
+- **Comparing the histogram of x and the histogram of y, the distributions of these two random variable is similar to each other.**
+
+# A-18020-2018-09-28
+
+This part is about different methods in Monte Carlo integration, such as important sampling or
+find important function.
+
+## Question 1
+
+Write a function to compute a Monte Carlo estimate of the Beta(3, 3) cdf, and use the function to estimate F (x) for x = 0.1, 0.2, . . . , 0.9. Compare the estimates with the values returned by the **pbeta** function in R.
+
+## Answer 1
+
+```{r 5.4}
+Beta_es = function(x) {
+  m = 10000
+  t = runif(m, min = 0, max = x)
+  g = function(y) x * y^2 * (1 - y)^2 / beta(3, 3)
+  theta_hat = mean(g(t))
+  theta_hat
+} # Monte Carlo estimate
+```
+
+Now I use the function to estimate the cdf of Beta(3, 3)
+
+```{r 5.4(2)}
+x = 1:9
+y1 = NULL
+for (i in x) y1 = c(y1, Beta_es(i/10))
+y2 = pbeta(x/10, 3, 3)
+A = rbind(y1 = round(y1, 5), y2)
+rownames(A) = c("Beta.es", "pbeta")
+colnames(A) = c("0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9")
+```
+
+Here is the result and I put them into a matrix to make it easy to compare
+
+```{r 5.4(3)}
+A
+```
+
+From the matrix we can find that the deviation of the result of **"Beta.es"** to **"pbeta"** is about 1/1000 of **"pbeta"**.
+
+## Question 2
+
+The Rayleigh density [156, (18.76)] is $\mathit{f}$($\mathit{x}$) = $\frac{x}{\sigma^2}e^{-x^2/2\sigma^2}$ , $\mathit{x}\geq0$ , $\sigma>0$
+
+Implement a function to generate samples from a Rayleigh($\sigma$) distribution, using antithetic variables.What is the percent reduction in variance of $\frac{\mathit{X} + \mathit{X}'}{2}$ compared with $\frac{\mathit{X}_{1} + \mathit{X}_{2}}{2}$ for independent X1, X2?
+
+## Answer 2
+
+First I use inverse transformation method generate two samples, using antithetic variables.
+
+```{r 5.9}
+G = function(m, sigma) {
+  u = runif(m/2)
+  x1 = sqrt(-2 * sigma^2 * log(1 - u))
+  x_ = sqrt(-2 * sigma^2 * log(u))
+  c(x1, x_)
+} # generating function
+m = 1e4
+sigma = 3
+result = G(m, sigma)
+x1 = result[1:(m/2)]
+x_ = result[(m/2 + 1):m]
+var1 = (sd((x1 + x_)/2))^2
+x2 = sqrt(-2 * sigma^2 * log(1 - runif(m/2)))
+var2 = (sd((x1 + x2)/2))^2
+c(var1, var2)
+```
+
+X1 and X_ are negatively correlated. X1 and X2 are independent and have same distribution. Comparing var1 and var2 we can see that the effect of negatively correlated in this exmaple is obvious.
+
+This is the percent reduction in variance of $\frac{\mathit{X} + \mathit{X}'}{2}$ compared with $\frac{\mathit{X}_{1} + \mathit{X}_{2}}{2}$.
+
+```{r 5.9(2)}
+100*(var2-var1)/var2
+```
+
+It really has a big reduction by using two negatively correlated variables.
+
+## Question 3
+
+Find two importance functions $\mathit{f}_{1}$ and $\mathit{f}_{2}$ that are supported on (1,$\infty$) and are 'close' to $\mathit{g}$($\mathit{x}$) = $\frac{x^2}{\sqrt{2\pi}}e^{-x^2/2}$ , $\mathit{x}>1$. 
+
+Which of your two importance functions should produce the smaller variance in estimating $\int_{1}^{\infty}\frac{x^2}{\sqrt{2\pi}}e^{-x^2/2}dx$ by importance sampling? Explain.
+
+## Answer 3
+
+```{r 5.13}
+m = 1e4
+u = runif(m)
+theta_hat = se = numeric(2)
+```
+
+First I use $\mathit{f}_{1}$($\mathit{x}$) = $\frac{1}{x^2}$ , $1<x<\infty$ , and the cdf is $\mathit{F}_{1}$($\mathit{x}$) = $1-\frac{1}{x}$ when $x>1$ , = 0 when $x\leq1$ , using inverse transformation to generate a sample with the distribution $\mathit{f}_{1}$($\mathit{x}$).
+
+```{r 5.13(2)}
+x = 1/(1 - u) # using f1
+fg1 = x^4 * exp(-x^2/2) / sqrt(2 * pi)
+theta_hat[1] = mean(fg1)
+se[1] = sd(fg1)
+```
+
+Next I use $\mathit{f}_{2}$($\mathit{x}$) = $xe^{\frac{1-x^2}{2}}$ , $1<x<\infty$ , and the cdf is $\mathit{F}_{2}$($\mathit{x}$) = $1-e^{\frac{1-x^2}{2}}$ when $x>1$ , = 0 when $x\leq1$ , using inverse transformation to generate a sample with the distribution $\mathit{f}_{2}$($\mathit{x}$).
+
+```{r 5.13(3)}
+x = sqrt(1 - 2 * log(1 - u)) # using f2
+fg2 = x * exp(-1/2) / sqrt(2 * pi)
+theta_hat[2] = mean(fg2)
+se[2] = sd(fg2)
+```
+
+Then I can give out the result.
+
+```{r 5.13(4)}
+B = rbind(theta_hat, se)
+rownames(B) = c("theta", "se")
+colnames(B) = c("f1", "f2")
+B
+```
+
+**From the result matrix, we can see that f2 can produce a smaller variance by important sampling. **
+
+-- **Explain**:Seeing the process of important sampling, we can find that if g(x) = cf(x), the variance of theta_hat can reach the minimal value 0 because the variables g(x)/f(x) ia a constant. Comparing f1 and f2 in this example, both of them are decreasing. However, the speed of decreasing of f2 is exponential. That is similar with g(x) because they have exponential term in their expression, while f1 just have the decreasing speed of $x^{-1}$. So the variance of g/f2 is much smaller than g/f1.
+
+## Question 4
+
+Obtain a Monte Carlo estimate of $\int_{1}^{\infty}\frac{x^2}{\sqrt{2\pi}}e^{-x^2/2}dx$ by importance sampling.
+
+## Answer 4
+
+We can use the result in Question 3, using the function $\mathit{f}_{2}$($\mathit{x}$) = $xe^{\frac{1-x^2}{2}}$ , $1<x<\infty$.
+
+```{r 5.14}
+m = 1e4
+u = runif(m)
+x = sqrt(1 - 2 * log(1 - u))
+fg2 = x * exp(-1/2) / sqrt(2 * pi)
+(theta_hat = mean(fg2))
+```
+
+# A-18020-2018-10-12
+
+This part is about Monte Carlo method in inference, some applications and some analysis.
+
+## Question 1
+
+Let $\mathit{X}$ be a non-negative random variable with $\mu$ = $\mathit{E}$[$\mathit{X}$] < $\infty$. For a random sample x1,...,xn from the distribution of $\mathit{X}$, the Gini ratio is defined by    $\mathit{G}$ = $\frac{1}{2n^2\mu}\sum_{j=1}^{n}\sum_{i=1}^{n}|x_{i}-x_{j}|$. The Gini ratio is applied in economics to measure inequality in income distribution. Note that $\mathit{G}$ can be written in terms of the order statistics $x_{i}$ as  $\mathit{G}$ = $\frac{1}{n^2\mu}\sum_{i=1}^{n}(2i-n-1)x_{(i)}$. If the mean is unknown, let $\hat{\mathit{G}}$ be the statistic $\mathit{G}$ with $\mu$ replaced by $\bar{x}$. Estimate by simulation the mean, median and deciles of $\hat{\mathit{G}}$ if $\mathit{X}$ is standard lognormal. Repeat the procedure for the uniform distribution and Bernoulli(0, 1). Also construct density histograms of the replicates in each case.
+
+## Answer 1
+
+```{r 6.9}
+sym = function(x) {
+  z = quantile(x, c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
+  z = c(z, mean(x), median(x))
+  names(z) = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "Mean", "Median")
+  z
+}
+```
+
+This is lognormal distribution.
+
+```{r 6.9(2)}
+n = 100
+m = 100
+G_r1 = G_r2 = G_r3 = numeric(m)
+for (i in 1:m) {
+  x = rlnorm(n)
+  u = mean(x)
+  x = sort(x)
+  sum = 0
+  for (j in 1:n) {sum = sum + (2 * j - n - 1) * x[j]}
+  G_r1[i] = sum / 10000 / u
+}
+sym(G_r1)
+hist(G_r1, freq = F, main = "Histogram of lognormal")
+```
+
+This is uniform distribution.
+
+```{r 6.9(3)}
+for (i in 1:m) {
+  x = runif(n)
+  u = mean(x)
+  x = sort(x)
+  sum = 0
+  for (j in 1:n) {sum = sum + (2 * j - n - 1) * x[j]}
+  G_r2[i] = sum / 10000 / u
+}
+sym(G_r2)
+hist(G_r2, freq = F, main = "Histogram of uniform")
+```
+
+This is Bernoulli distribution.
+
+```{r 6.9(4)}
+for (i in 1:m) {
+  x = sample(0:1, n, rep = T, prob = c(0.9, 0.1))
+  u = mean(x)
+  x = sort(x)
+  sum = 0
+  for (j in 1:n) {sum = sum + (2 * j - n - 1) * x[j]}
+  G_r3[i] = sum / 10000 / u
+}
+sym(G_r3)
+hist(G_r3, freq = F, main = "Histogram of Bernoulli")
+```
+
+Search on the Wikipedia, we can find that for every distribution, Gini ratio can be calculated by the parameters theoretically. For uniform distribution, Gini ratio $\gamma$ = $\frac{b-a}{3(b+a)}$, and for lognormal distribution, $\gamma$ = $erf(\sigma/2)$ (error function) (I cannot find the theoretical Gini ratio of Bernoulli distribution, so I do not calculate it).
+
+```{r 6.9(5)}
+G1 = mean(G_r1)
+G2 = mean(G_r2)
+G_l = (pnorm(1/2, mean = 0, sd = sqrt(0.5)) - 0.5) * 2
+G_u = 1/3
+matrix(c(G1, G2, G_l, G_u), nrow = 2, byrow = T, dimnames = (list(c("theoretical", "empirical"), c("lognormal", "uniform"))))
+```
+
+--**We can see that the empirical result is close to the theoretical result.**
+
+## Question 2
+
+Construct an approximate 95% confidence interval for the Gini ratio $\gamma$ = $\mathit{E}$[$\mathit{G}$] if $\mathit{X}$ is lognormal with unknown parameters. Assess the coverage rate of the estimation procedure with a Monte Carlo experiment.
+
+## Answer 2
+
+This question is really complicated, we can use so many methods to estimate the convince interval and do Monte Carlo experiment. There I use two methods to finish this task. Both of them have advantages and disavantages.
+
+--**Method 1**
+
+First I set mu = 0 and sigma = 1 to generate the sample **x**, then forget two parameters. Let **y** = ln**x**, so **y** have the exponential distribution. It is easy to estimate confidence intervals of mu and sigma of **y**. Because Gini ratio is just decided by sigma, so we can estimate the Gini ratio confidence interval. Repeat many times and take the average value to calculate E[G].
+
+```{r 6.10}
+mu = 0
+sigma = 1
+M = 1000
+n = 50
+G_hat = Sig1 = Sig2 = Mu_hat = Sigma_hat = result = G1 = G2 = numeric(M)
+for (i in 1:M) {
+  x = rlnorm(n, mu, sigma)
+  y = log(x)
+  S = 0
+  y_ = mean(y)
+  for (j in 1:length(y)) S = S + (y[j] - y_)^2
+  S = sqrt(S / (n - 1))
+  Mu_hat[i] = y_
+  Sigma_hat[i] = S
+  Sig1[i] = sqrt((n - 1) * S^2 / qchisq(0.025, n - 1, lower.tail = FALSE))
+  Sig2[i] = sqrt((n - 1) * S^2 / qchisq(1 - 0.025, n - 1, lower.tail = FALSE))
+  G_hat[i] = (pnorm(Sigma_hat[i]/2, mean = 0, sd = sqrt(0.5)) - 0.5) * 2
+}
+```
+
+[Sig1, Sig2] is the 95% confidence interval of sigma, then because Gini ratio expression  $\mathit{G}$($\sigma$) is monotone increasing, so use left point and right point to calculate [G1, G2].
+
+```{r 6.10(2)}
+for (i in 1:M){
+  G1[i] = (pnorm(Sig1[i]/2, mean = 0, sd = sqrt(0.5)) - 0.5) * 2
+  G2[i] = (pnorm(Sig2[i]/2, mean = 0, sd = sqrt(0.5)) - 0.5) * 2
+}
+```
+
+This is the confidence interval of G (a group of intervals).
+
+Next I will show E[G] and theoretical G.
+
+```{r 6.10(3)}
+EG = mean(G_hat)
+G = (pnorm(1/2, mean = 0, sd = sqrt(0.5)) - 0.5) * 2
+c = c(EG, G)
+names(c) = c("E[G]", "theoretical G")
+c
+```
+
+Now we use parameters we estimate to do Monte Carlo experiments to see whether the coverage rate is normal.
+
+There are parameters we estimate, they are close to actual parameters mu = 0 and sigma = 1.
+
+```{r 6.10(4)}
+m = 1e3
+mu_hat = mean(Mu_hat)
+sigma_hat = mean(Sigma_hat)
+c(mu_hat, sigma_hat)
+```
+
+```{r 6.10(5)}
+for (i in 1:M) {
+  if ((G1[i] < G) && (G2[i] > G)) result[i] = 1
+  else result[i] = 0
+}
+mean(result)
+```
+
+We can see that the coverage rate is about 95%, it is so nice. However, when I think about the algorithm, I found that if I use **y** to estimate the sigma, it may be not right because the variance of "ln" is not equal to ln(variance). So I try to use method 2.
+
+--**Method2**
+
+In this method I use bootstrap to estimate the confidence interval. I do experiments to see the coverage rate with different n (the size of sample).
+
+```{r 6.10(6)}
+library(boot)
+library(MASS)
+mu = 0
+sigma = 1
+n = 50
+M = 200
+Gini <- function(x) {
+  x = sort(x)
+  u = mean(x)
+  sum = 0
+  for (j in 1:length(x)) {sum = sum + (2 * j - length(x) - 1) * x[j]}
+  G = sum / length(x)^2 / u
+  G
+}
+boot.Gini = function(x, i) Gini(x[i])
+ci.norm<-ci.basic<-ci.perc<-matrix(NA,M,2)
+G = (pnorm(1/2, mean = 0, sd = sqrt(0.5)) - 0.5) * 2
+for (k in 1:M) {
+  x = rlnorm(n)
+  de <- boot(data=x,statistic=boot.Gini, R = 500)
+  ci <- boot.ci(de,type=c("norm","basic","perc"))     
+  ci.norm[k,]<-ci$norm[2:3]
+  ci.basic[k,]<-ci$basic[4:5]
+  ci.perc[k,]<-ci$percent[4:5]
+}
+  cat('norm =',mean(ci.norm[,1]<=G & ci.norm[,2]>=G),'basic =',mean(ci.basic[,1]<=G & ci.basic[,2]>=G), 'perc =',mean(ci.perc[,1]<=G & ci.perc[,2]>=G))
+```
+
+**From the bootstrap method we can see these three of CI methods have different effect but all the coverage rates of them are not big enough to get 95%. So I try to make n = 200 to see the coverage rate.**
+
+```{r 6.10(7)}
+library(boot)
+library(MASS)
+mu = 0
+sigma = 1
+n = 200
+M = 200
+Gini <- function(x) {
+  x = sort(x)
+  u = mean(x)
+  sum = 0
+  for (j in 1:length(x)) {sum = sum + (2 * j - length(x) - 1) * x[j]}
+  G = sum / length(x)^2 / u
+  G
+}
+boot.Gini = function(x, i) Gini(x[i])
+ci.norm<-ci.basic<-ci.perc<-matrix(NA,M,2)
+G = (pnorm(1/2, mean = 0, sd = sqrt(0.5)) - 0.5) * 2
+for (k in 1:M) {
+  x = rlnorm(n)
+  de <- boot(data=x,statistic=boot.Gini, R = 500)
+  ci <- boot.ci(de,type=c("norm","basic","perc"))     
+  ci.norm[k,]<-ci$norm[2:3]
+  ci.basic[k,]<-ci$basic[4:5]
+  ci.perc[k,]<-ci$percent[4:5]
+}
+  cat('norm =',mean(ci.norm[,1]<=G & ci.norm[,2]>=G),'basic =',mean(ci.basic[,1]<=G & ci.basic[,2]>=G), 'perc =',mean(ci.perc[,1]<=G & ci.perc[,2]>=G))
+```
+
+**We can find that when n gets bigger, coverage rate has obvious improve. So we can guess that if n is big enough, the coverage rate will become better.**
+
+## Question 3
+
+Tests for association based on Pearson product moment correlation $\rho$, Spearman's rank correlation coefficient $\rho_s$, or Kendall's coefficient $\tau$, are implemented in **cor.test**. Show (empirically) that the nonparametric tests based on $\rho_s$ or $\tau$ are less powerful than the correlation test when the sampled distribution is bivariate normal. Find an example of an alternative (a bivariate distribution ($\mathit{X}$, $\mathit{Y}$) such that $\mathit{X}$ and $\mathit{Y}$ are dependent) such that at least one of the nonparametric tests have better empirical power than the correlation test against this alternative.
+
+## Answer 3
+
+In this question we just need to use function **cor.test**, use different methods to test the correlation between sample **x** and **y**. Calculate the probability of p-value being less than 0.05 (Power). If the probability is bigger, the method is better and more powerful.
+
+Fisrt **x** and **y** are bivariate normal.
+
+```{r 6.B}
+library(MASS)
+m = 1000
+result1 = result2 = result3 = numeric(m)
+for (i in 1:m) {
+  Sigma = matrix(c(1, 0.5, 0.5, 1), nrow = 2, byrow = T)
+  A = mvrnorm(n = 50, rep(0, 2), Sigma)
+  x = A[, 1]
+  y = A[, 2]
+  c1 = cor.test(x, y, method = "pearson", alternative = "t")
+  c2 = cor.test(x, y, method = "kendall", alternative = "t")
+  c3 = cor.test(x, y, method = "spearm", alternative = "t")
+  result1[i] = c1$p.value
+  result2[i] = c2$p.value
+  result3[i] = c3$p.value
+}
+mean(result1[] < 0.05)
+mean(result2[] < 0.05)
+mean(result3[] < 0.05)
+```
+
+We can see that the first probability is bigger than other two, which means Pearson correlation test is more powerful than other two nonparametric tests when the sampled dis- tribution is bivariate normal.
+
+Seeing more about the process of Pearson method, we can find that this test is based on normal distribution. As a result, it is easy to understand why Pearson correlation test is more powerful.
+
+Then I genarate X with uniform distribution and let Y equals 1/X. Use three tests again.
+
+```{r 6.B(2)}
+m = 1000
+result1 = result2 = result3 = numeric(m)
+for (i in 1:m) {
+  x = runif(50)
+  y = 1 / x
+  c1 = cor.test(x, y, method = "pearson", alternative = "t")
+  c2 = cor.test(x, y, method = "kendall", alternative = "t")
+  c3 = cor.test(x, y, method = "spearm", alternative = "t")
+  result1[i] = c1$p.value
+  result2[i] = c2$p.value
+  result3[i] = c3$p.value
+}
+mean(result1[] < 0.05)
+mean(result2[] < 0.05)
+mean(result3[] < 0.05)
+```
+
+Compared three results, we can find in this example, two nonparametric tests have better empirical power than Pearson correlation test. So we need to use different methods to solve different practical problem.
+
+# A-18020-2018-11-02
+
+This part is about Bootstrap and Jackknife method, which are really useful when data is not enough and even jusy one sample.
+
+## Question 1
+
+Compute a jackknife estimate of the bias and the standard error of the correlation statistic in Example 7.2.
+
+## Answer 1
+
+These are all the parameters in this program. According to the algorithm of Jackknife, the times of experiment is related to the length of the sample. I take 'n' same to the length of the sample.
+
+```{r 7.1(1)}
+library(bootstrap) # for the law data
+n = length(law$LSAT) # the times of jackknife of sample 'law'
+m = length(law82$LSAT) # the times of jackknife of sample 'law82'
+```
+
+```{r 7.1(2)}
+cor1.hat = cor(law$LSAT, law$GPA)
+cor1.jack = numeric(n)
+for (i in 1:n) cor1.jack[i] = cor(law$LSAT[-i], law$GPA[-i])
+bias1.jack = (n-1) * (mean(cor1.jack) - cor1.hat)
+se1.jack = sqrt((n-1)*mean((cor1.jack-cor1.hat)^2))
+x = c(cor1.hat, bias1.jack, se1.jack)
+names(x) = c("cor", "bias", "se")
+x # the law data
+
+cor2.hat = cor(law82$LSAT, law82$GPA)
+cor2.jack = numeric(m)
+for (i in 1:m) cor2.jack[i] = cor(law82$LSAT[-i], law82$GPA[-i])
+bias2.jack = (m-1) * (mean(cor2.jack) - cor2.hat)
+se2.jack = sqrt((m-1)*mean((cor2.jack-cor2.hat)^2))
+y = c(cor2.hat, bias2.jack, se2.jack)
+names(y) = c("cor", "bias", "se")
+y # the law82 data
+```
+
+The code is easy, same to the algorithm in PPT. From Example 7.2, standard error of bootstrap of sample 'law' is **0.1303343**, which is close to the Jackknife standard error. So the bias and the standard error of estimate is good and acceptable. The same point is that both of two bias are smaller than zero.
+
+## Question 2
+
+Refer to Exercise 7.4. Compute 95% bootstrap confidence intervals for the mean time between failures 1/$\lambda$ by the standard normal, basic, percentile, and BCa methods. Compare the intervals and explain why they may differ.
+
+## Answer 2
+
+These are all the parameters in this program. R and m are changeable.
+
+```{r 7.5(1)}
+library(boot)
+R = 1000 # times in one bootstrap
+m = 1000 # total times of bootstrap
+```
+
+The MLE of $\lambda$ in exponential distribution is $\frac{1}{\bar{X}}$. So 1/$\lambda$ can be estimated by mean of sample $\bar{X}$.
+
+```{r 7.5(2)}
+boot.rate = function(x,i) mean(x[i])
+ci.norm = ci.basic = ci.perc = ci.bca = matrix(NA,m,2)
+for (i in 1:m) {
+  de = boot(data=aircondit[,1], statistic=boot.rate, R)
+  ci = boot.ci(de, type=c("norm","basic","perc","bca"))
+  ci.norm[i,] = ci$norm[2:3]
+  ci.basic[i,] = ci$basic[4:5]
+  ci.perc[i,] = ci$percent[4:5]
+  ci.bca[i,] = ci$bca[4:5]
+}
+  norm = c(mean(ci.norm[,1]), mean(ci.norm[,2]))
+  basic = c(mean(ci.basic[,1]), mean(ci.basic[,2]))
+  perc = c(mean(ci.perc[,1]), mean(ci.perc[,2]))
+  bca = c(mean(ci.bca[,1]), mean(ci.bca[,2]))
+  A = rbind(norm, basic, perc, bca)
+  row.names(A) = c("norm", "basic", "perc", "bca")
+  A
+```
+
+The essential point in this exercise is how to write the **boot.rate** function. The parameter in **mean** is not x but x[i]. I think if the distribution or the estimate become more complicated, boot function will become more difficult to write.
+
+--**Basic method produces the smallest interval and BCa method gives out the biggest. And the BCa CI is the longest of four. **
+
+The reason of the difference between these four intervals is the difference between four algorithms of producing CI. Standard normal method is the easiest one, just use theta.hat and normal distribution to generate CI. The Basic bootstrap CI based on the large sample property, and it uses the cdf F. So this CI is more reliable than the standard norm CI. Percentile method base more on sample. BCa method expand the origin length of CI which can be seen from the expression of CI.
+
+## Question 3
+
+Refer to Exercise 7.7. Obtain the jackknife estimates of bias and standard error of $\hat{\theta}$.
+
+## Answer 3
+
+These are all the parameters in this program.
+
+```{r 7.8(1)}
+n = 88 # the length of scor is the times of jackknife
+```
+
+**cov** function give the covariance between variables and **eigen** function can calculate the eigenvalues of a matrix and show them from big to small.
+
+```{r 7.8(2)}
+theta.hat = eigen(cov(scor))$value[1]/sum(eigen(cov(scor))$value)
+theta.jack = numeric(n)
+for (i in 1:n) theta.jack[i] = eigen(cov(scor[-i,]))$value[1]/sum(eigen(cov(scor[-i,]))$value)
+bias.jack = (n-1) * (mean(theta.jack) - theta.hat)
+se.jack = sqrt((n-1)*mean((theta.jack-theta.hat)^2))
+round(c(theta=theta.hat,bias=bias.jack,se=se.jack),6)
+```
+
+The code is also easy. The bias and the sandard error are acceptable. However, in the beginning I thought I need to calculate the MLE of the origin matrix. Then I found that the sample matrix is actually the MLE. So the exercise become really easy.
+
+## Question 4
+
+In Example 7.18, leave-one-out ($\mathit{n}$-fold) cross validation was used to select the best fitting model. Use leave-two-out cross validation to compare the models.
+
+## Answer 4
+
+These are packages and parameters needed in this program. DAAG is downloaded from Internet.
+
+```{r 7.11(1)}
+library(DAAG)
+attach(ironslag)
+n = length(magnetic) # length of sample
+```
+
+Just imitate the program in example 7.18. The differences are the size of error arrays
+and for every error, we need to test two points and get average error of them two.
+
+```{r 7.11(2)}
+e1 = e2 = e3 = e4 = numeric(n*(n-1)/2)
+
+# fitting models on leave-two-out samples
+for (i in 1:(n-1)) {
+  for (j in (i+1):n) {
+    y = magnetic[c(-i, -j)]
+    x = chemical[c(-i, -j)]
+    
+    J1 = lm(y ~ x)
+    yhat1.1 = J1$coef[1] + J1$coef[2] * chemical[i]
+    yhat1.2 = J1$coef[1] + J1$coef[2] * chemical[j]
+    e1[(2*n-i)*(i-1)/2 + j - i] = (magnetic[i] - yhat1.1 + magnetic[j] - yhat1.2) / 2
+    
+    J2 = lm(y ~ x + I(x^2))
+    yhat2.1 = J2$coef[1] + J2$coef[2] * chemical[i] + J2$coef[3] * chemical[i] ^ 2
+    yhat2.2 = J2$coef[1] + J2$coef[2] * chemical[j] + J2$coef[3] * chemical[j] ^ 2
+    e2[(2*n-i)*(i-1)/2 + j - i] = (magnetic[i] - yhat2.1 + magnetic[j] - yhat2.2) / 2
+    
+    J3 = lm(log(y) ~ x) 
+    logyhat3.1 = J3$coef[1] + + J3$coef[2] * chemical[i]
+    logyhat3.2 = J3$coef[1] + + J3$coef[2] * chemical[j]
+    yhat3.1 = exp(logyhat3.1)
+    yhat3.2 = exp(logyhat3.2) 
+    e3[(2*n-i)*(i-1)/2 + j - i] = (magnetic[i] - yhat3.1 + magnetic[j] - yhat3.2) / 2
+    
+    J4 = lm(log(y) ~ log(x))
+    logyhat4.1 = J4$coef[1] + J4$coef[2] * log(chemical[i])
+    logyhat4.2 = J4$coef[1] + J4$coef[2] * log(chemical[j])
+    yhat4.1 = exp(logyhat4.1)
+    yhat4.2 = exp(logyhat4.2)
+    e4[(2*n-i)*(i-1)/2 + j - i] = (magnetic[i] - yhat4.1 + magnetic[j] - yhat4.2) / 2
+  }
+}
+
+c(mean(e1^2), mean(e2^2), mean(e3^2), mean(e4^2))
+```
+
+We can fing that mean squared error are much smaller than leave-one-out method. Maybe the reason is that using two points to test is more reliable than just use one point when training samples are nearly the same. Also the size of error arrays for each model become more bigger than leave-one-out. As a result, the mean squared error become samller.
+
+Compared four mean squared error, the quadratic model is the best. It is corresponding with the result of leave-one-out method.
+
+# A-18020-2018-11-16
+
+This part is about the idea of permutation in data analysis and its application in some test. Metropolis-Hastings algorithm is at the end additionally.
+
+## Question 1
+
+Implement the two-sample Cramer-von Mises test for equal distributions as a permutation test. Apply the test to the data in Examples 8.1 and 8.2.
+
+## Answer 1
+
+```{r 16q1(1)}
+library(nortest)
+R = 999
+W = numeric(R)
+attach(chickwts)
+x = sort(as.vector(weight[feed == "soybean"]))
+y = sort(as.vector(weight[feed == "linseed"]))
+detach(chickwts)
+K = 1:26
+z = c(x, y)
+n = length(x)
+m = 26-n
+options(warn = -1)
+```
+
+```{r 16q1(2)}
+s = 0
+for (i in 1:n) s = s + (ecdf(x)(x[i])-ecdf(y)(x[i]))^2
+for (i in 1:m) s = s + (ecdf(x)(y[i])-ecdf(y)(y[i]))^2
+W0 = m*n*s/(m + n)^2
+
+for (j in 1:R) {
+  k = sample(K, size = n, replace = F)
+  x1 = z[k]
+  y1 = z[-k]
+  s1 = 0
+  for (i in 1:n) s1 = s1 + (ecdf(x1)(x1[i])-ecdf(y1)(x1[i]))^2
+  for (i in 1:m) s1 = s1 + (ecdf(x1)(y1[i])-ecdf(y1)(y1[i]))^2
+  W[j] = m*n*s1/(m + n)^2
+}
+p = mean(c(W0, W) >= W0)
+options(warn = 0)
+p
+
+hist(W, main = "", freq = FALSE, xlab = "W (p = 0.42)", breaks = "scott")
+points(W0, 0, cex = 1, pch = 16, col = "red")
+```
+
+From the result p = 0.42, compared with p = 0.46 in K-S test method, we can say that this method do really well.
+
+## Question 2
+
+Design experiments for evaluating the performance of the NN, energy, and ball methods in various situations.
+
+## Answer 2
+
+```{r 16q2(1)}
+library(RANN)
+library(boot)
+library(energy)
+library(Ball)
+library(MASS)
+set.seed(1)
+prob = 1
+m = 1e2
+k = 3
+p = 2
+mu = 0.1
+sd = 2
+n1 = 50
+n2 = 40
+R = 99
+n = n1+n2
+N = c(n1,n2)
+```
+
+**First we test balanced sample.**
+
+**Situation 1**: Unequal variances and equal expectations
+
+```{r 16q2(2)}
+Tn = function(z, ix, sizes, k){
+  n1 = sizes[1]
+  n2 = sizes[2]
+  z = z[ix, ]
+  NN = nn2(data = z, k = k+1)
+  block1 = NN$nn.idx[1:n1, -1]
+  block2 = NN$nn.idx[(n1+1):n, -1]
+  i1 = sum(block1 < n1+.5)
+  i2 = sum(block2 > n1+.5)
+  (i1+i2)/(k*n)
+}
+
+eqdist.nn = function(z, sizes, k, R){
+  boot.obj = boot(data = Z, statistic = Tn, R = R, sim = 'permutation', sizes = sizes, k = 3)
+  ts = c(boot.obj$t0, boot.obj$t)
+  p.value = mean(ts>=ts[1])
+  list(statistic = ts[1], p.value = p.value)
+}
+
+p.values = matrix(NA, m ,3)
+for(i in 1:m){
+  X = matrix(rnorm(n1*p), ncol = p)
+  Y = cbind(rnorm(n2), rnorm(n2, sd = sd))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+We can see from the result that Ball method performs much better than other two test methods and Energy has almost the same effect with NN method.
+
+**Situation 2**: Unequal variance and unequal expectation
+
+```{r 16q2(3)}
+mu = 0.1
+sd = 1.5
+for(i in 1:m){
+  X = matrix(rnorm(n1*p), ncol = p)
+  Y = cbind(rnorm(n2, mean = mu, sd = sd), rnorm(n2, mean = mu, sd = sd))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+We can modify the expectation and variance to see the sensitivity to different parameters of each method. First modify the expectation. 
+
+```{r 16q2(4.1)}
+for(i in 1:m){
+  X = matrix(rnorm(n1*p), ncol = p)
+  Y = cbind(rnorm(n2, mean = mu/2, sd = sd - 0.4), rnorm(n2, mean = mu/2, sd = sd - 0.4)) # mu/2 = 0.05   sd -0.4 = 1.1
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+Then modify the variance.
+
+```{r 16q2(4.2)}
+for(i in 1:m){
+  X = matrix(rnorm(n1*p), ncol = p)
+  Y = cbind(rnorm(n2, mean = mu/2, sd = sd - 0.2), rnorm(n2, mean = mu/2, sd = sd - 0.2)) # mu = 0.1   sd - 0.2 = 1.3
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+Comparing two results of modifying expectation or variance, we can draw some conclusions. First when the difference of variance is not so obvious and if the difference of expectation narrows, although Ball method still do best, all three method can not perform so well as they do before. Second, from the last part, the difference of expectation is small. However, Ball method shows much more powerful than other two.
+
+So we can conclude that the difference of variance dominates during testing and Ball method is most sensitive to the change of variance, which may explain why it can do much better than other two methods.
+
+**Situation 3**: Non-normal distributions
+
+**t-distribution** with different degree of freedom
+
+```{r 16q2(5)}
+for(i in 1:m){
+  X = matrix(rt(n1*p, df = 1), ncol = p)
+  Y = cbind(rt(n2, df = 1.5), rt(n2, df = 1.5))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+It is obvious that Ball method still perform powerful in this situation.
+
+Then we can increase the degree of freedom of t-distribution to see the result.
+
+```{r 16q2(6)}
+for(i in 1:m){
+  X = matrix(rt(n1*p, df = 1), ncol = p)
+  Y = cbind(rt(n2, df = 3), rt(n2, df = 3))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+It shows that NN and Energy method need df to get big enough to make precise test, which means they are not as sensitive as Ball.
+
+**bimodel distribution** with different probabilities of each normal distribution. Two normal distribution have same expectation and variance.
+
+```{r 16q2(7)}
+for(i in 1:m){
+  p1 = 0.3
+  p2 = 0.6
+  U1 = runif(n1)
+  U2 = runif(n2)
+  X = ((U1<p1)*mvrnorm(n1, mu = c(0,0), Sigma = diag(c(1,1)))+(1-(U1<p1))*mvrnorm(n1, mu = c(1,1), Sigma = matrix(c(1.5,1.2,1.2,1), nrow = 2)))
+  Y = ((U2<p2)*mvrnorm(n2, mu = c(0,0), Sigma = diag(c(1,1)))+(1-(U2<p2))*mvrnorm(n2, mu = c(1,1), Sigma = matrix(c(1.5,1.2,1.2,1), nrow = 2)))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+Equal probability of two normal distribution between X and Y but different expectation and variance of each normal distribution.
+
+```{r 16q2(8)}
+for(i in 1:m){
+  p1 = 0.4
+  p2 = 0.4
+  U1 = runif(n1)
+  U2 = runif(n2)
+  X = ((U1<p1)*mvrnorm(n1, mu = c(0,0), Sigma = diag(c(1,1)))+(1-(U1<p1))*mvrnorm(n1, mu = c(1,1), Sigma = matrix(c(1,0,0,1), nrow = 2)))
+  Y = ((U2<p2)*mvrnorm(n2, mu = c(1,0.5), Sigma = diag(c(2,1)))+(1-(U2<p2))*mvrnorm(n2, mu = c(1,1), Sigma = matrix(c(1.5,1.2,1.2,1), nrow = 2)))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.05
+pow = colMeans(p.values<alpha)
+pow
+```
+
+We can see from the first part that all three methods do not really well as they did before. If we want to test well, the difference of probability needs to get big enough. 
+
+From second part we surprisedly find that NN method do really better than Energy or Ball method no matter how we modify the variance. The distribution type may influence.
+
+**Situation 4**: Unbalanced samples
+
+```{r 16q2(9)}
+mu = 0.1
+sd = 1.5
+n1 = 100
+n2 = 10
+N = c(n1, n2)
+n = n1+n2
+for(i in 1:m){
+  X = matrix(rnorm(n1*p), ncol = p)
+  Y = cbind(rnorm(n2, mean = mu, sd = sd), rnorm(n2, mean = mu, sd = sd))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.1
+pow = colMeans(p.values<alpha)
+pow
+```
+
+We can change the variance as same as balanced sample to see the power of all three tests.
+
+```{r 16q2(10)}
+mu = 0.1
+sd = 1.5
+n1 = 100
+n2 = 10
+N = c(n1, n2)
+n = n1+n2
+for(i in 1:m){
+  X = matrix(rnorm(n1*p), ncol = p)
+  Y = cbind(rnorm(n2, mean = mu, sd = sd-0.2), rnorm(n2, mean = mu, sd = sd-0.2))
+  Z = rbind(X, Y)
+  p.values[i,1] = eqdist.nn(Z, sizes = N, k, R = R)$p.value
+  p.values[i,2] = eqdist.etest(Z, sizes = N, R = R)$p.value
+  p.values[i,3] = bd.test(x = X, y = Y, R = R, seed = i)$p.value
+}
+alpha = 0.1
+pow = colMeans(p.values<alpha)
+pow
+```
+
+From the result we can see all three method cannot do as well as before in unbalanced sample and Energy method is the best of three. The unbalance of two sample really has significant influence on all the tests.
+
+## Question 3
+
+Use the Metropolis-Hastings sampler to generate random variables from a standard Cauchy distribution. Discard the first 1000 of the chain, and compare the deciles of the generated observations with the deciles of the standard Cauchy distribution (see **qcauchy** or **qt** with df = 1). Recall that a Cauchy($\theta, \eta$) distribution has density function $\mathit{f}(x) = \frac{1}{\theta\pi(1+[(x-\eta)/\theta]^2)}$ , $-\infty<x<\infty, \theta > 0$. The standard Cauchy has the Cauchy($\theta =1, \eta = 0$) density. (Note that the standard Cauchy density is equal to the Student t density with one degree of freedom.)
+
+## Answer 3
+
+I let g(r|s) = N($\mathit{X}_{t}, \sigma^2$). It can be proves that this proposal distribution have g(r|s) = g(s|r). So it is Metropolis-Hastings sampler.
+
+```{r 16q3(1)}
+sigma = 5
+N = 100000 # size of MC sample.
+k = 0 # accept rate
+```
+
+```{r 16q3(2)}
+x = numeric(N)
+x[1] = rnorm(1, sd = sigma)
+for (i in 2:N) {
+  y = rnorm(1, mean = x[i-1], sd = sigma)
+  u = runif(1)
+  r = dcauchy(y) * dnorm(x[i-1], mean = y, sd = sigma) / (dcauchy(x[i-1]) * dnorm(y, mean = x[i-1], sd = sigma))
+  if (u < r) {x[i] = y;k = k+1}
+  else x[i] = x[i-1]
+}
+xp = x[10001:N]
+plot(x, type = "l", xlab = "x", xlim = c(1, N), ylim = range(x))
+
+k / (N-1)
+
+c = (1:9) / 10
+qc = qcauchy(c)
+qx = quantile(xp, c)
+qqplot(qc, qx, xlab = "Cauchy Quantiles", ylab = "Sample Quantiles")
+g = function(x) {x}
+curve(g, add = T, type = "l", col = "red")
+
+c = (5:95) / 100
+qc = qcauchy(c)
+qx = quantile(x, c)
+qqplot(qc, qx, xlab = "Cauchy Quantiles", ylab = "Sample Quantiles")
+g = function(x) {x}
+curve(g, add = T, type = "l", col = "red")
+
+hist(x[(x>-20)&(x<20)], freq = F, breaks = seq(-20.5, 20.5, 0.5))
+curve(dcauchy, add = T, col = "red")
+```
+
+I draw a Q-Q plot because it is more easy to analyze than deciles plot. When **sigma** in proposal distribution gets bigger, the accept rate will decrease.(when sigma < 2, the accept rate will be too high, about 0.6-0.7. sigma = 5 is proper, about 0.35-0.4.) Besides, the size of sample (N) also influences the result. when N = 10000, the Q-Q plot always is not a straight line. When N = 50000 or 100000, Q-Q plot is really correspond with line 'y = x' except one or two point.(Burn-in is 1/10 of N)
+
+From histogram we can claim the result of our experiment is really good.
+
+## Question 4
+
+Rao presented an example on genetic linkage of 197 animals in four categories. The group sizes are (125, 18, 20, 34). Assume that the probabilities of the corresponding multino-
+mial distribution are $(\frac{1}{2}+\frac{\theta}{4},\frac{1-\theta}{4},\frac{1-\theta}{4},\frac{\theta}{4})$ . Estimate the posterior distribution of $\theta$ given the observed sample, using one of the methods in this chapter.
+
+## Answer 4
+
+I use the random walk Metropolis sampler with a uniform proposal distribution.
+
+```{r 16q4(1)}
+N = 5000 # length of MC.
+burn = 1000 # burn-in time
+w = 1 # width of the uniform support set
+type = c(125, 18, 20, 34)
+```
+
+```{r 16q4(2)}
+x = numeric(N)
+x[1] = 0.01
+prob <- function(y, a) {
+if (y < 0 || y >= 1) return (0) 
+  return((0.5 + y/4)^a[1] * ((1-y)/4)^a[2] * ((1-y)/4)^a[3] * (y/4)^a[4])
+}
+for (i in 2:N) {
+  u = runif(1)
+  y = runif(1, 0, w)
+  if(u < prob(y, type)/prob(x[i-1], type)) x[i] = y
+  else x[i] = x[i-1]
+}
+print(round(type/sum(type), 3))
+xp = x[(burn+1):N]
+theta = mean(xp)
+print(c("empirical theta: ", theta))
+print(round(c(0.5 + theta/4, (1-theta)/4, (1-theta)/4, theta/4), 3))
+
+plot(x, type = "l", xlab = "x", xlim = c(1, N), ylim = range(x))
+hist(xp, freq = F)
+```
+
+We can compute the MLE of theta (it is easy to compute by hand) is 0.62682. So the empirical result is acceptable. The posterior distribution of $\theta$ can be shown in histogram.
+
+# A-18020-2018-11-23
+
+Markov chain and Numerical method.
+
+## Question 1
+
+For exercise 9.6, use the Gelman-Rubin method to monitor convergence of the chain, and run the chain until the chain has converged approximately to the target distribution according to $\hat{R}$ > 1.2.
+
+## Answer 1
+
+```{r 23q1(1)}
+n = 2000 # length of each MC chain.
+b = 100 # burn-in time
+w = 1 # width of the uniform support set
+type = c(125, 18, 20, 34)
+k = 4 # number of chains to generate
+x0 = c(-10, -5, 5, 10) #initial values for each chain
+```
+
+$\theta$ can be estimated by mean of sample, so function $\psi$ is the mean value.
+
+```{r 23q1(2), eval=FALSE}
+Gelman.Rubin = function(psi) {
+  psi = as.matrix(psi)
+  n = ncol(psi)
+  k = nrow(psi)
+  psi.means = rowMeans(psi)
+  B = n * var(psi.means)
+  psi.w = apply(psi, 1, "var") 
+  W = mean(psi.w)
+  v.hat = W*(n-1)/n + (B/n) 
+  r.hat = v.hat / W 
+  return(r.hat)
+}
+
+normal.chain = function(w, N, X1) {
+  x = rep(0, N)
+  x[1] = X1
+  prob <- function(y, a) {
+if (y < 0 || y >= w) return (0) 
+  return((0.5 + y/4)^a[1] * ((1-y)/4)^a[2] * ((1-y)/4)^a[3] * (y/4)^a[4])
+  }
+  for (i in 2:N) {
+  u = runif(1)
+  y = runif(1, 0, w)
+  if(u < prob(y, type)/prob(x[i-1], type)) x[i] = y/w
+  else x[i] = x[i-1]
+  }
+  
+  return(x)
+}
+
+X = matrix(0, nrow=k, ncol=n) 
+for (i in 1:k) X[i, ] = normal.chain(w, n, x0[i])
+psi = t(apply(X, 1, cumsum)) 
+for (i in 1:nrow(psi)) psi[i,] = psi[i,] / (1:ncol(psi)) 
+print(Gelman.Rubin(psi)) # R_hat
+
+par(mfrow=c(2,2)) # plot psi for the four chain
+for (i in 1:k) plot(psi[i, (b+1):n], type="l", xlab=i, ylab=bquote(psi))
+par(mfrow=c(1,1))
+
+rhat = rep(0, n) # plot the sequence of R_hat
+for (j in (b+1):n) rhat[j] = Gelman.Rubin(psi[,1:j]) 
+plot((b+1):n, rhat[(b+1):n], type="l", xlab="", ylab="R", xaxt = "n")
+axis(1, at = c(100, 500, 1000, 1500, 2000))
+abline(h=1.2, lty=2)
+```
+
+I generate four chains to do the monitor. It can be seen from the histogram that $\psi$ converges very well. R_hat value is about 1.03 which means the samples of $\theta$ mix and converge well enough. 
+
+## Question 2
+
+Find the intersection points $A(k)$ in $(0,\sqrt{k})$ of the curves $S_{k-1}(a)=P(t(k-1)>\sqrt{\frac{a^2(k-1)}{k-a^{2}}})$ and $S_{k}(a)=P(t(k)>\sqrt{\frac{a^2k}{k+1-a^{2}}})$ for k = 4 : 25, 100, 500, 1000, where t(k) is a Student t random variable with k degrees of freedom. 
+
+## Answer 2
+
+First we use uniroot and f = $S_{k-1}(a)-S_{k}(a)$ to find the root.
+
+```{r 23q2(1)}
+Sk = function(k, a)  pt(sqrt(a^2*k/(k+1-a^2)), k, lower.tail = F, log.p = T)
+
+A = matrix(NA, 25, 2)
+k = c(4:25, 100, 500, 1000)
+for (i in 1:25) {
+  solution = uniroot(function(a)  {pt(sqrt(a^2*(k[i]-1)/(k[i]-a^2)), k[i]-1, lower.tail = F, log.p = T) - pt(sqrt(a^2*k[i]/(k[i]+1-a^2)), k[i], lower.tail = F, log.p = T)}, c(0.0001, sqrt(k[i])-0.0001))
+  A[i,] = c(solution$root, Sk(k[i], solution$root))
+}
+A
+
+plot(A[,1], A[,2], type = "p", col = "red")
+```
+
+Through finishing this experiment I found that we need to add "log.p = TRUE" in **pt** function so that the intersection points are precise. If we do not add, when a comes close to $\sqrt{k}$, $S_{k-1}$ and $S_{k}$ are both too small so that uniroot function cannot distinguish them. The given root is upper limit of the interval. That is obviously wrong. And log.p can help us to solve this problem.
+
+From the plot we can see as k varies, the intersection points are almost on a straight line(xlab is root and ylab is the value of $S_{k}$ or $S_{k-1}$).
+
+**Next part is not a correct answer, just a experiment I try. So you can ignore it.**
+
+After finishing method 1, I try to use simulation method to find the root(use simulation to estimate probability). However, this method is not very precise and the result is close to method 1 when **pt** function has parameter "lop.p = F". So simulation method in this example is not very reliable.
+
+```{r 23q2(2), eval=FALSE}
+N = 1e6
+B = matrix(NA, 25, 2)
+for (i in 1:25) {
+  g = function(a) {
+    x = rt(N, k[i]-1)
+    y = rt(N, k[i])
+    mean(log(x[x>0]) > 0.5*(2*log(a) + log(k[i]-1)-log(k[i]-a^2))) - mean(log(y[y>0]) > 0.5*(2*log(a) + log(k[i])-log(k[i]+1-a^2)))
+  }
+  solution2 = uniroot(g, c(0.1, sqrt(k[i])-0.1))
+  B[i,] = c(solution2$root, Sk(k[i], solution2$root))
+}
+B
+
+plot(B[,1], B[,2], type = "p", col = "red")
+```
+
+The plot of simulation method also shows that we cannot use simulation to solve this exercise. 
+
+# A-18020-2018-11-30
+
+This part is mainly about EM algorithm, a little complex.
+
+## Question 1
+
+Write a function to compute the cdf of the Cauchy distribution, which has
+density $\frac{1}{\theta\pi(1+[(x-\eta)/\theta]^2)}, -\infty<x<\infty$, where $\theta>0$. Compare your results to the results from the R function pcauchy. (Also see the source code in **pcauchy.c**.)
+
+## Answer 1
+
+I test twelve values of theta and for each theta I choose fifty upper integration points, from -10 to 10.
+
+```{r 30q1(1)}
+eta = 0
+theta = seq(1, 5, length.out = 12)
+n = 50 # the number of quantiles
+```
+
+```{r 30q1(2), eval=FALSE}
+f = function(x, theta, eta) {1/(theta*pi*(1+((x-eta)/theta)^2))}
+v = matrix(NA, length(theta), n)
+q = seq(-10, 10, length.out = n)
+for (i in 1:length(theta)) {
+  for (j in 1:n) {
+    v[i, j] = integrate(f, lower = -Inf, upper = q[j], rel.tol=.Machine$double.eps^0.25, theta = theta[i], eta)$value
+  }
+}
+par(mfrow = c(3, 4))
+g = function(x) {x}
+for (i in 1:12) {
+  qc = pcauchy(q, scale = theta[i])
+  qqplot(qc, v[i, ], xlab = "Cauchy Quantiles", ylab = "Integration Quantiles")
+  curve(g, add = T, type = "l", col = "red")
+}
+```
+
+The idea of code is easy and we can easily prove that the result of numerical integraion is really close to the **pcauchy** function.
+
+
+## Question 2
+
+  + Let the three alleles be A, B, and O.
+      
+      ```{r,echo=FALSE}
+      dat <- rbind(Genotype=c('AA','BB','OO','AO','BO','AB','Sum'),
+                   Frequency=c('p^2','q^2','r^2','2pr','2qr','2pq',1),
+                   Count=c('nAA','nBB','nOO','nAO','nBO','nAB','n'))
+      knitr::kable(dat,format='latex')
+      ```
+      + Observed data: $n_{A\cdot}=n_{AA}+n_{AO}=28$ (A-type), $n_{B\cdot}=n_{BB}+n_{BO}=24$ (B-type), $n_{OO}=41$ (O-type), $n_{AB}=70$ (AB-type).
+    
+      + Use EM algorithm to solve MLE of $p$ and $q$ (consider missing data $n_{AA}$ and $n_{BB}$).
+    
+      + Record the log-maximum likelihood values in M-steps, are they increasing?
+
+## Answer 2
+
+Idea: This EM has three parameters to estimate, in every E step I use pn, qn, rn to evaluate nAA and nAO, nBB and nBO (That is the same), then use nAA, nAO, nBB, nBO to present pn+1, qn+1, rn+1 (If I do this, M step will be simplified, I do not need to calculate derivative of log-maximum likelihood values in every M step. I will use MLE to check whether this modification is feasible).
+
+```{r 30q2(1)}
+nA_ = 28
+nB_ = 24
+nOO = 41
+nAB = 70
+l = NULL
+flag = T
+```
+
+```{r 30q2(2)}
+lv = function(p,q,r) nA_*log(p^2+2*p*r)+nB_*log(q^2+2*q*r)+2*nOO*log(r)+nAB*log(2*p*q) # log-maximum likelihood values
+
+p1 = 0.4 # initial value
+p2 = 0.4 # initial value
+nAA = nA_*p1
+nBB = nB_*p2
+nAO = nA_-nAA
+nBO = nB_-nBB
+s = (nA_+nB_+nAB+nOO)*2
+p = (2*nAA+nAO+nAB) / s
+q = (2*nBB+nBO+nAB) / s
+r = (2*nOO+nAO+nBO) / s
+l = c(l, lv(p,q,r)) # first log-maximum likelihood values
+
+EM = function(){
+  time = 1
+  while(flag == T){
+    p1 = p/(p+2*r)
+    p2 = q/(q+2*r)
+    nAA = nA_*p1
+    nBB = nB_*p2
+    nAO = nA_-nAA
+    nBO = nB_-nBB
+    pnew = (2*nAA+nAO+nAB) / s
+    qnew = (2*nBB+nBO+nAB) / s
+    rnew = (2*nOO+nAO+nBO) / s
+    flag = max(abs(pnew-p), abs(qnew-q), abs(rnew-r))>1e-12
+    time = time + 1
+    p = pnew
+    q = qnew
+    r = rnew
+    l = c(l, lv(p,q,r))
+  }
+  list(p = p,q = q,r = r, time = time, lv = l)
+}
+result = EM()
+result
+plot(result$lv)
+```
+
+**We can see from the plot that log-maximum likelihood values are increasing. That is correct.**
+
+Then I compute the MLE of obeserved data. the MLE is -251.9145 which is same to the EM result. So it is proved that the simplication above is correct and feasible.
+
+# A-18020-2018-12-07
+
+The use of "apply"s function.
+
+## Question 1
+
+Use both for loops and lapply() to fit linear models to the mtcars using the formulas stored in this list:
+
+formulas <- list(
+  mpg ~ disp,
+  mpg ~ I(1 / disp), 
+  mpg~disp+wt, 
+  mpg~I(1/disp)+wt
+)
+
+## Answer 1
+
+```{r 7q1}
+attach(mtcars)
+
+formulas = list(mpg~disp, mpg ~ I(1 / disp), mpg~disp+wt, mpg~I(1/disp)+wt)
+
+# for loop
+out1 = vector("list", length(formulas))
+for (i in seq_along(formulas)) out1[[i]] = lm(formulas[[i]])
+out1
+
+# lapply()
+out2 = vector("list", length(formulas))
+out2 = lapply(seq_along(formulas), function(i){lm(formulas[[i]])})
+out2
+
+detach(mtcars)
+```
+
+Comparing each model by for loop and lapply, the result is same.
+
+## Question 2
+
+Fit the model mpg ~ disp to each of the bootstrap replicates of mtcars in the list below by using a for loop and lapply(). Can you do it without an anonymous function?
+       
+bootstraps <- lapply(1:10, function(i) {
+  rows <- sample(1:nrow(mtcars), rep = TRUE)
+  mtcars[rows, ]
+})
+
+
+## Answer 2
+
+```{r 7q2}
+bootstraps = lapply(1:10, function(i) {
+  rows = sample(1:nrow(mtcars), rep = TRUE)
+  mtcars[rows, ]
+})
+
+# for loop
+out3 = vector("list", length(bootstraps))
+for (i in seq_along(bootstraps)) out3[[i]] = lm(mtcars$mpg~mtcars$disp, bootstraps[[i]])
+out3
+
+# lapply()
+out4 = vector("list", length(formulas))
+out4 = lapply(seq_along(bootstraps), function(i){lm(mtcars$mpg~mtcars$disp, bootstraps[[i]])})
+out4
+
+# without anonymous function
+replicate(10, {
+  rows = sample(1:nrow(mtcars), rep = TRUE)
+  a = mtcars[rows, ]
+  lm(a$mpg~a$disp)
+}, simplify = F)
+```
+
+I use **replicate** to replace anonymous function, do modeling for 10 times.
+
+And comparing ten models by these three methods, the result is correct. We can also see from r^2 in Question 3.
+
+## Question 3
+
+For each model in the previous two exercises, extract $R^2$ using the function below.
+
+rsq <- function(mod) summary(mod)$r.squared
+
+## Answer 3
+
+```{r 7q3}
+rsq = function(mod) summary(mod)$r.squared
+
+cat("out1",'\n', unlist(lapply(seq_along(out1), function(i) {rsq(out1[[i]])})), '\n')
+
+cat("out2",'\n', unlist(lapply(seq_along(out2), function(i) {rsq(out2[[i]])})), '\n')
+
+cat("out3",'\n', unlist(lapply(seq_along(out3), function(i) {rsq(out3[[i]])})), '\n')
+
+cat("out4",'\n', unlist(lapply(seq_along(out4), function(i) {rsq(out4[[i]])})), '\n')
+```
+
+We can compare four outcomes to prove for loop and lapply give out same results. Besides, obeserving out3 and out4, r^2 of different bootstrap samples are same, which is also correct.
+
+## Question 4
+
+The following code simulates the performance of a t-test for non-normal data. Use sapply() and an anonymous function to extract the p-value from every trial.
+
+trials <- replicate(
+  100,
+  t.test(rpois(10, 10), rpois(7, 10)),
+  simplify = FALSE
+)
+
+Extra challenge: get rid of the anonymous function by using [[ directly.
+
+## Answer 4
+
+```{r 7q4}
+trials = replicate(100,t.test(rpois(10, 10), rpois(7, 10)),simplify = FALSE)
+sapply(seq_along(trials), function(i){trials[[i]]$p.value})
+
+# without anonymous function
+for(i in 1:length(trials)) print(trials[[i]]$p.value)
+```
+
+I use for loop and [[]] to get the p-value of each trial to get rid of anonymous function.
+
+## Question 5
+
+Implement a combination of Map() and vapply() to create an lapply() variant that iterates in parallel over all of its inputs and stores its outputs in a vector (or a matrix). What argu- ments should the function take?
+
+## Answer 5
+
+```{r 7q5}
+library(parallel)
+
+mcvMap = function(f, FUN.VALUE, ...) {
+    out = mcMap(f, ...)
+    vapply(out, identity, FUN.VALUE)
+}
+
+f = function(x) c(mean(x), sd(x))
+x = list(a = rnorm(20, 3), b = rnorm(30, 5))
+mcvMap(f = f, c(mean=0, sd=0), x)
+```
+
+There is a problem that **Map** calculates one by one so I decide to use function **mcMap** in package **parallel**, which is the parallelized version of function **Map**. And **identity** in vapply is used to keep the result because **out** is already the result to be shown.
+
+The example proves that mcvMap can work correctly.
+
+# A-18020-2018-12-14
+
+Some faster version of ordinary functions and comparision between R and Rcpp.
+
+```{r 1214}
+library(microbenchmark)
+```
+
+## Question 1
+
+Make a faster version of chisq.test() that only computes the chi-square test statistic when the input is two numeric vectors with no missing values. You can try simplifying chisq.test() or by coding from the mathematical definition (http://en. wikipedia.org/wiki/Pearson%27s_chi-squared_test).
+
+## Answer 1
+
+```{r 14q1}
+quickch = function(x, y) {
+  A = table(x, y)
+  sumxy = rowSums(A)
+  sumin = colSums(A)
+  fb = sumxy %*% t(sumin) / sum(A)
+  chisq = sum((A - fb)^2 / fb)
+  chisq
+}
+
+chisq.test(1:5, 6:10)
+quickch(1:5, 6:10)
+
+microbenchmark(chisq.test(1:5, 6:10),quickch(1:5, 6:10))
+```
+
+The chisq.test is used to test the independency between two datas. We can use the chisq_stat formula $\chi^2 = \sum_{i=1}^{r}\sum_{j=1}^{c}\frac{(O_{i,j}-E_{i,j})^2}{E_{i,j}}$ to compute. 
+
+Comparing two results, we can see **quickch** works well and when the input is simple, it is much faster than **chisq.test**.
+
+## Question 2
+
+Can you make a faster version of table() for the case of an input of two integer vectors with no missing values? Can you use it to speed up your chi-square test?
+
+## Answer 2
+
+```{r 14q2}
+quickt = function(x, y) {
+  a = sort(unique(x))
+  b = sort(unique(y))
+  A = matrix(0, length(a), length(b), dimnames = list(a, b))
+  
+  for (i in 1:length(x)) {
+    m = which(a == x[i])
+    n = which(b == y[i])
+    A[m, n] = A[m, n] + 1
+  }
+  
+  class(A) = "table"
+  A
+}
+x = sample(1:5, replace = T)
+y = sample(1:5, replace = T)
+table(x, y)
+quickt(x, y)
+
+microbenchmark(table(x, y),quickt(x, y))
+
+
+quickch1 = function(x, y) {
+  A = quickt(x, y)
+  sumxy = rowSums(A)
+  sumin = colSums(A)
+  fb = sumxy %*% t(sumin) / sum(A)
+  chisq = sum((A - fb)^2 / fb)
+  chisq
+}
+
+microbenchmark(chisq.test(1:5, 6:10),quickch1(1:5, 6:10))
+```
+
+The algorithm is simple and easy to understand. The most time-cost part is the function **unique**. We can see that quickt works well.
+
+The **quickt** function can be used in exercise 1 when the input is integer and need to be changed into table format. If the input of chisq.test is already table format, there is no need to use **quickt**.
+
+## Question 3
+
+Write an Rcpp function for Exercise 9.6 (page 277, Statistical Computing with R). Compare the corresponding generated random numbers with those by the R function you wrote before using the function "qqplot". Campare the computation time of the two functions with the function "microbenchmark". Comments your results.
+
+## Answer 3
+
+```{r 14q3}
+library(Rcpp)
+sourceCpp("/Users/Daniel/Desktop/MCMC.cpp")
+
+# Rcpp
+N = 5000 
+burn = 1000
+type = c(125, 18, 20, 34)
+x = numeric(N)
+MCMC(x, type, N)
+
+xp = x[(burn+1):N]
+theta = mean(xp)
+print(c("empirical theta: ", theta))
+print(round(c(0.5 + theta/4, (1-theta)/4, (1-theta)/4, theta/4), 3))
+
+plot(x, type = "l", xlab = "x", xlim = c(1, N), ylim = range(x))
+hist(xp, freq = F)
+
+# R
+RMCMC = function(o) {
+  prob = function(y, a) {
+  if (y < 0 || y >= 1) return (0) 
+    return((0.5 + y/4)^a[1] * ((1-y)/4)^a[2] * ((1-y)/4)^a[3] * (y/4)^a[4])
+  }
+  x = numeric(N)
+  x[1] = 0.01
+  for (i in 2:N) {
+    u = runif(1)
+    y = runif(1)
+    if(u < prob(y, type)/prob(x[i-1], type)) x[i] = y
+    else x[i] = x[i-1]
+  }
+  x
+}
+
+x2 = numeric(N)
+x2 = RMCMC()
+
+xp2 = x2[(burn+1):N]
+plot(x2, type = "l", xlab = "x2", xlim = c(1, N), ylim = range(x2))
+hist(xp2, freq = F)
+
+a = seq(0, 100, by = 2)/100
+qqplot(quantile(xp, a), quantile(xp2, a))
+g = function(x) x
+curve(g, add = T, col = "red")
+
+microbenchmark(MCMC(x, type, N), RMCMC())
+```
+
+We can see from the qqplot and microbenchmark results that two sample distribution is nearly the same and MCMC in cpp is much faster than RMCMC function.

@@ -1,0 +1,29 @@
+Package: StatComp18020
+Type: Package
+Title: Funcitons in statistic computation
+Version: 0.1.0
+Author: 18020
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    nortest,
+    boot,
+    Ball,
+    DAAG,
+    MASS,
+    RANN,
+    bootstrap,
+    energy,
+    microbenchmark,
+    Rcpp
+RoxygenNote: 6.1.1
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+URL: http://github.com/McDaniel7/StatComp
+BugReports: http://github.com/McDaniel7/StatComp/issues
